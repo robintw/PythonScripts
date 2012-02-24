@@ -5,6 +5,7 @@ import re
 import os
 import shutil
 import subprocess
+import sys
 from bs4 import BeautifulSoup
 
 ## Tries to find docsetutil
@@ -25,22 +26,31 @@ docsetutil_path = docsetutil_path[0]
 ## Script should run in the folder where the docs live
 source_folder = os.getcwd() + "/"
 
-## Find the Python version of the docs
-python_version = None
-f = open(source_folder + "index.html", 'r')
-for line in f:
-    search = re.search("dash; (.*?) documentation</title>", line)
-    if search:
-        python_version = search.group(1)
-        break
-f.close()
+# If there is a command-line argument given then this is the
+# name to use for the docset so use these rather than trying to
+# find the Python version (allows use with other Sphinx-based docs)
+if len(sys.argv) > 1:
+	docset_name = sys.argv[1]
+else:
+	## Find the Python version of the docs
+	python_version = None
+	f = open(source_folder + "index.html", 'r')
+	for line in f:
+		search = re.search("dash; (.*?) documentation</title>", line)
+		if search:
+			python_version = search.group(1)
+			break
+	f.close()
+	
+	if python_version == None:
+		print ("I could not find Python's version in the index.html "
+			   "file. Are you in the right folder??")
+		exit(1)
 
-if python_version == None:
-    print ("I could not find Python's version in the index.html "
-           "file. Are you in the right folder??")
-    exit(1)
+	docset_name = python_version.strip().lower().replace(" ", "_")
 
-docset_name = python_version.strip().lower().replace(" ", "_")
+
+
 dest_folder = source_folder + ("%s.docset/" % docset_name)
 
 
@@ -106,7 +116,7 @@ info.write("""<?xml version="1.0" encoding="UTF-8"?>
     <string>python</string>
 </dict>
 </plist>
-""" % (python_version.strip().lower().replace(" ", "."), python_version.strip()))
+""" % (docset_name.strip().lower().replace(" ", "."), docset_name.strip()))
 info.close()
 
 ## Create Nodes.xml
